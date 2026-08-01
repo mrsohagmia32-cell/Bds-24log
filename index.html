@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>আমার ব্লগ</title>
-  
-  <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
 
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
@@ -22,8 +20,8 @@
     .post-date { font-size: 0.85em; color: #777; margin-bottom: 12px; }
     .post-summary { line-height: 1.6; color: #555; margin-bottom: 15px; }
     
-    .post-body { line-height: 1.8; font-size: 16px; word-wrap: break-word; }
-    .post-body a { color: #0070f3 !important; text-decoration: underline !important; font-weight: 500; }
+    .post-body { line-height: 1.8; font-size: 16px; word-wrap: break-word; white-space: pre-wrap; }
+    .post-body a { color: #0070f3 !important; text-decoration: underline !important; font-weight: bold; }
     .post-body a:hover { color: #0056b3 !important; }
     
     .read-more-btn { display: inline-block; background: #0070f3; color: #fff; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 14px; }
@@ -68,7 +66,7 @@
           const parts = line.split(':');
           if (parts.length >= 2) {
             const key = parts[0].trim();
-            const value = parts.slice(1].join(':').replace(/['"]/g, '').trim();
+            const value = parts.slice(1).join(':').replace(/['"]/g, '').trim();
             metadata[key] = value;
           }
         });
@@ -76,26 +74,21 @@
       return { metadata, body };
     }
 
-    // অটোমেটিক মার্কডাউন ক্লিন-আপ এবং নো-ফলো সলিউশন
-    function processContent(rawText) {
-      if (!rawText) return '';
+    // ব্র্যাকেট সম্পূর্ণ রিমুভ করে লিঙ্ক তৈরি করার ফাংশন
+    function renderBodyWithLinks(text) {
+      if (!text) return '';
 
-      // ১. [text] এবং (url) এর মাঝে যত স্পেস বা ইন্টার থাক সেটিকে এক লাইনে এনে সঠিক HTML তৈরি করা
-      let fixedText = rawText.replace(/\[([^\]]+)\][\s\r\n]*\((https?:\/\/[^\s\)]+)\)/g, '<a href="$2" target="_blank" rel="nofollow noopener noreferrer">$1</a>');
-
-      // ২. বাকি কন্টেন্ট মার্কডাউন রেন্ডার করা
-      let htmlOutput = marked.parse(fixedText);
-
-      // ৩. অতিরিক্ত কোনো সাধারণ <a> ট্যাগ থাকলে সেগুলোতেও rel="nofollow" যোগ করা
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = htmlOutput;
-      const links = tempDiv.querySelectorAll('a');
-      links.forEach(link => {
-        link.setAttribute('rel', 'nofollow noopener noreferrer');
-        link.setAttribute('target', '_blank');
+      // ১. ব্র্যাকেট [...] এবং (...) মুছে ফেলে শুধু মূল টেক্সটকে ক্লিকেবল নো-ফলো লিংকে পরিণত করবে
+      let html = text.replace(/\[([\s\S]*?)\][\s\r\n]*\((https?:\/\/[^\s\)]+)\)/gi, function(match, anchorText, url) {
+        return `<a href="${url.trim()}" target="_blank" rel="nofollow noopener noreferrer">${anchorText.trim()}</a>`;
       });
 
-      return tempDiv.innerHTML;
+      // ২. সরাসরি HTML <a> ট্যাগ থাকলেও তাতে rel="nofollow" যোগ করবে
+      html = html.replace(/<a\s+(?:[^>]*?\s+)?href="([^"]*)"([^>]*)>/gi, function(match, url, rest) {
+        return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer"${rest}>`;
+      });
+
+      return html;
     }
 
     async function loadAllPosts() {
@@ -117,7 +110,8 @@
             const date = metadata.date ? new Date(metadata.date).toLocaleDateString('bn-BD') : '';
             const image = metadata.image ? metadata.image : '';
             
-            const cleanText = body.replace(/\[([^\]]+)\][\s\r\n]*\([^\)]+\)/g, '$1').replace(/<[^>]*>/g, '');
+            // সামারির ভেতর থেকেও ব্র্যাকেট দূর করা
+            const cleanText = body.replace(/\[([\s\S]*?)\][\s\r\n]*\([^\)]+\)/g, '$1').replace(/<[^>]*>/g, '');
             const summary = metadata.summary || cleanText.substring(0, 150) + "...";
 
             const postUrl = `?post=${file.name}`;
@@ -152,8 +146,7 @@
 
         document.title = title;
 
-        // প্রসেস করা কন্টেন্ট লোড করা
-        const formattedBody = processContent(body);
+        const formattedBody = renderBodyWithLinks(body);
 
         appContent.innerHTML = `
           <a href="/" class="back-btn">&larr; হোমপেজে ফিরে যান</a>
