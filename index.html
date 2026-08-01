@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>আমার ব্লগ ওয়েবসাইট</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; line-height: 1.6; }
+        header { background: #1a73e8; color: white; padding: 20px; text-align: center; }
+        header h1 { margin-bottom: 10px; font-size: 24px; }
+        nav { margin-top: 10px; }
+        nav a { color: white; background: #0d52b1; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; }
+        nav a:hover { background: #083b82; }
+        .container { max-width: 800px; margin: 30px auto; padding: 0 20px; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card h2 { color: #1a73e8; margin-bottom: 10px; }
+        .card p { color: #555; }
+        footer { text-align: center; padding: 20px; color: #777; margin-top: 40px; }
+    </style>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>স্বাগতম আমাদের ব্লগে</h1>
+        <p>ডাটাবেজ ছাড়াই ভিজিটরদের সরাসরি পোস্ট করার ওয়েবসাইট</p>
+        <br>
+        <nav>
+            <a href="/admin/">এখানে ক্লিক করে নতুন পোস্ট লিখুন</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>প্রথম নমুনা পোস্ট</h2>
+            <p>আমাদের নতুন ওয়েবসাইট সফলভাবে চালু হয়েছে! যেকোনো ভিজিটর উপরে "নতুন পোস্ট লিখুন" বাটনে ক্লিক করে একাউন্ট খুলে সরাসরি নতুন পোস্ট প্রকাশ করতে পারবেন।</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 সর্বস্বত্ব সংরক্ষিত</p>
+    </footer>
+
+    <script>
+      if (window.netlifyIdentity) {
+        window.netlifyIdentity.on("init", user => {
+          if (!user) {
+            window.netlifyIdentity.on("login", () => {
+              document.location.href = "/admin/";
+            });
+          }
+        });
+      }
+    </script>
+</body>
+</html>
