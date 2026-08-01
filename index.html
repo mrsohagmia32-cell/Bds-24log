@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>আমার ব্লগ</title>
   
-  <!-- Markdown parser library -->
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Marked.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
 
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
@@ -24,8 +24,8 @@
     .post-summary { line-height: 1.6; color: #555; margin-bottom: 15px; }
     
     .post-body { line-height: 1.8; font-size: 16px; word-wrap: break-word; }
-    .post-body a { color: #0070f3; text-decoration: underline; font-weight: 500; }
-    .post-body a:hover { color: #0056b3; }
+    .post-body a { color: #0070f3 !important; text-decoration: underline !important; font-weight: bold; }
+    .post-body a:hover { color: #0056b3 !important; }
     
     .read-more-btn { display: inline-block; background: #0070f3; color: #fff; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 14px; }
     .back-btn { display: inline-block; margin-bottom: 20px; color: #0070f3; text-decoration: none; font-weight: bold; }
@@ -49,24 +49,6 @@
     const urlParams = new URLSearchParams(window.location.search);
     const singlePostFile = urlParams.get('post');
     const appContent = document.getElementById('app-content');
-
-    // Marked-এর জন্য অটো Nofollow রেন্ডারার কনফিগারেশন
-    const renderer = new marked.Renderer();
-    renderer.link = function(href, title, text) {
-      // যদি অবজেক্ট আকারে আসে (नवीन Marked সংস্করণের জন্য)
-      if (typeof href === 'object') {
-        text = href.text;
-        title = href.title;
-        href = href.href;
-      }
-      let out = `<a href="${href}" rel="nofollow noopener noreferrer" target="_blank"`;
-      if (title) {
-        out += ` title="${title}"`;
-      }
-      out += `>${text}</a>`;
-      return out;
-    };
-    marked.use({ renderer });
 
     if (singlePostFile) {
       loadSinglePost(singlePostFile);
@@ -95,9 +77,30 @@
       return { metadata, body };
     }
 
+    // অটোমেটিক Nofollow এবং লিংক ফরম্যাট করার ফাংশন
+    function formatContent(rawBody) {
+      // ১. ব্র্যাকেটের মধ্যকার ফাঁকা জায়গা বা নিউলাইন দূর করা [text] (url) -> [text](url)
+      let cleanMarkdown = rawBody.replace(/\[([^\]]+)\]\s*[\r\n]*\s*\((https?:\/\/[^\)]+)\)/g, '[$1]($2)');
+      
+      // ২. HTML র‍্যান্ডার করা
+      let html = marked.parse(cleanMarkdown);
+
+      // ৩. সব <a> ট্যাগে অটোমেটিক rel="nofollow" এবং target="_blank" বসানো
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      
+      const links = tempDiv.querySelectorAll('a');
+      links.forEach(link => {
+        link.setAttribute('rel', 'nofollow noopener noreferrer');
+        link.setAttribute('target', '_blank');
+      });
+
+      return tempDiv.innerHTML;
+    }
+
     async function loadAllPosts() {
       try {
-        const res = await fetch(`https://api.github.com/repos/${repoUser}/${repoName}/contents/posts?t=${new Date().getTime()}`;
+        const res = await fetch(`https://api.github.com/repos/${repoUser}/${repoName}/contents/posts?t=${new Date().getTime()}`);
         if (!res.ok) { appContent.innerHTML = "<p>কোনো পোস্ট পাওয়া যায়নি!</p>"; return; }
         
         const files = await res.json();
@@ -149,12 +152,13 @@
 
         document.title = title;
 
-        // এখানে marked স্বয়ংক্রিয়ভাবে সব লিংকে rel="nofollow" বসিয়ে দেবে
-        const formattedBody = marked.parse(body);
+        // ফরম্যাট করা কন্টেন্ট লোড করা
+        const formattedBody = formatContent(body);
 
         appContent.innerHTML = `
           <a href="/" class="back-btn">&larr; হোমপেজে ফিরে যান</a>
-          ` + (image ? `<div class="post-card"><img src="${image}" alt="${title}">` : `<div class="post-card">`) + `
+          <div class="post-card">
+            ${image ? `<img src="${image}" alt="${title}">` : ''}
             <h1 style="margin-top:0;">${title}</h1>
             ${date ? `<div class="post-date">প্রকাশের তারিখ: ${date}</div>` : ''}
             <div class="post-body">${formattedBody}</div>
