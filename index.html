@@ -1,57 +1,86 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>আমার ব্লগ ওয়েবসাইট</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; line-height: 1.6; }
-        header { background: #1a73e8; color: white; padding: 20px; text-align: center; }
-        header h1 { margin-bottom: 10px; font-size: 24px; }
-        nav { margin-top: 10px; }
-        nav a { color: white; background: #0d52b1; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; }
-        nav a:hover { background: #083b82; }
-        .container { max-width: 800px; margin: 30px auto; padding: 0 20px; }
-        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card h2 { color: #1a73e8; margin-bottom: 10px; }
-        .card p { color: #555; }
-        footer { text-align: center; padding: 20px; color: #777; margin-top: 40px; }
-    </style>
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>আমার ব্লগ</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { text-align: center; color: #2c3e50; }
+    .post { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .post h2 { margin-top: 0; color: #0070f3; }
+    .post-date { font-size: 0.85em; color: #777; margin-bottom: 15px; }
+    .post-body { line-height: 1.6; white-space: pre-wrap; }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h1>ব্লগ পোস্টসমূহ</h1>
+    <div id="blog-posts">পোস্টগুলো লোড হচ্ছে...</div>
+  </div>
 
-    <header>
-        <h1>স্বাগতম আমাদের ব্লগে</h1>
-        <p>ডাটাবেজ ছাড়াই ভিজিটরদের সরাসরি পোস্ট করার ওয়েবসাইট</p>
-        <br>
-        <nav>
-            <a href="/admin/">এখানে ক্লিক করে নতুন পোস্ট লিখুন</a>
-        </nav>
-    </header>
+  <script>
+    async function loadPosts() {
+      const repoUser = "mrsohagmia32-cell";
+      const repoName = "Bds-24log";
+      const postsContainer = document.getElementById("blog-posts");
 
-    <div class="container">
-        <div class="card">
-            <h2>প্রথম নমুনা পোস্ট</h2>
-            <p>আমাদের নতুন ওয়েবসাইট সফলভাবে চালু হয়েছে! যেকোনো ভিজিটর উপরে "নতুন পোস্ট লিখুন" বাটনে ক্লিক করে একাউন্ট খুলে সরাসরি নতুন পোস্ট প্রকাশ করতে পারবেন।</p>
-        </div>
-    </div>
+      try {
+        // Cache bypass করার জন্য timestamp যোগ করা হয়েছে
+        const response = await fetch(`https://api.github.com/repos/${repoUser}/${repoName}/contents/posts?t=${new Date().getTime()}`);
+        
+        if (!response.ok) {
+          postsContainer.innerHTML = "<p>এখনো কোনো পোস্ট প্রকাশ করা হয়নি বা `posts` ফোল্ডার তৈরি হয়নি!</p>";
+          return;
+        }
 
-    <footer>
-        <p>&copy; 2026 সর্বস্বত্ব সংরক্ষিত</p>
-    </footer>
+        const files = await response.json();
+        postsContainer.innerHTML = "";
 
-    <script>
-      if (window.netlifyIdentity) {
-        window.netlifyIdentity.on("init", user => {
-          if (!user) {
-            window.netlifyIdentity.on("login", () => {
-              document.location.href = "/admin/";
-            });
+        if (files.length === 0) {
+          postsContainer.innerHTML = "<p>কোনো পোস্ট পাওয়া যায়নি!</p>";
+          return;
+        }
+
+        for (const file of files) {
+          if (file.name.endsWith(".md") || file.name.endsWith(".html")) {
+            const res = await fetch(file.download_url + `?t=${new Date().getTime()}`);
+            const text = await res.text();
+
+            // Decap CMS এর Frontmatter (Title, Date, Body) আলাদা করার জন্য
+            let title = file.name.replace(/\.md|\.html/g, '');
+            let date = '';
+            let body = text;
+
+            const frontmatterMatch = text.match(/^---[\s\S]*?---/);
+            if (frontmatterMatch) {
+              const header = frontmatterMatch[0];
+              body = text.replace(header, '').trim();
+
+              const titleMatch = header.match(/title:\1*([^\n\r]+)/);
+              const dateMatch = header.match(/date:\1*([^\n\r]+)/);
+
+              if (titleMatch) title = titleMatch[1].replace(/['"]/g, '').trim();
+              if (dateMatch) date = dateMatch[1].replace(/['"]/g, '').trim();
+            }
+
+            const postElement = document.createElement("div");
+            postElement.className = "post";
+            postElement.innerHTML = `
+              <h2>${title}</h2>
+              ${date ? `<div class="post-date">প্রকাশের তারিখ: ${new Date(date).toLocaleDateString('bn-BD')}</div>` : ''}
+              <div class="post-body">${body}</div>
+            `;
+            postsContainer.appendChild(postElement);
           }
-        });
+        }
+      } catch (err) {
+        postsContainer.innerHTML = "<p>পোস্ট লোড করতে সমস্যা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।</p>";
       }
-    </script>
+    }
+
+    loadPosts();
+  </script>
 </body>
 </html>
