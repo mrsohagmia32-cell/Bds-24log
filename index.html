@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>আমার ব্লগ</title>
   
-  <!-- Marked.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
 
   <style>
@@ -24,7 +23,7 @@
     .post-summary { line-height: 1.6; color: #555; margin-bottom: 15px; }
     
     .post-body { line-height: 1.8; font-size: 16px; word-wrap: break-word; }
-    .post-body a { color: #0070f3 !important; text-decoration: underline !important; font-weight: bold; }
+    .post-body a { color: #0070f3 !important; text-decoration: underline !important; font-weight: 500; }
     .post-body a:hover { color: #0056b3 !important; }
     
     .read-more-btn { display: inline-block; background: #0070f3; color: #fff; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 14px; }
@@ -69,7 +68,7 @@
           const parts = line.split(':');
           if (parts.length >= 2) {
             const key = parts[0].trim();
-            const value = parts.slice(1).join(':').replace(/['"]/g, '').trim();
+            const value = parts.slice(1].join(':').replace(/['"]/g, '').trim();
             metadata[key] = value;
           }
         });
@@ -77,18 +76,19 @@
       return { metadata, body };
     }
 
-    // অটোমেটিক Nofollow এবং লিংক ফরম্যাট করার ফাংশন
-    function formatContent(rawBody) {
-      // ১. ব্র্যাকেটের মধ্যকার ফাঁকা জায়গা বা নিউলাইন দূর করা [text] (url) -> [text](url)
-      let cleanMarkdown = rawBody.replace(/\[([^\]]+)\]\s*[\r\n]*\s*\((https?:\/\/[^\)]+)\)/g, '[$1]($2)');
-      
-      // ২. HTML র‍্যান্ডার করা
-      let html = marked.parse(cleanMarkdown);
+    // অটোমেটিক মার্কডাউন ক্লিন-আপ এবং নো-ফলো সলিউশন
+    function processContent(rawText) {
+      if (!rawText) return '';
 
-      // ৩. সব <a> ট্যাগে অটোমেটিক rel="nofollow" এবং target="_blank" বসানো
+      // ১. [text] এবং (url) এর মাঝে যত স্পেস বা ইন্টার থাক সেটিকে এক লাইনে এনে সঠিক HTML তৈরি করা
+      let fixedText = rawText.replace(/\[([^\]]+)\][\s\r\n]*\((https?:\/\/[^\s\)]+)\)/g, '<a href="$2" target="_blank" rel="nofollow noopener noreferrer">$1</a>');
+
+      // ২. বাকি কন্টেন্ট মার্কডাউন রেন্ডার করা
+      let htmlOutput = marked.parse(fixedText);
+
+      // ৩. অতিরিক্ত কোনো সাধারণ <a> ট্যাগ থাকলে সেগুলোতেও rel="nofollow" যোগ করা
       const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      
+      tempDiv.innerHTML = htmlOutput;
       const links = tempDiv.querySelectorAll('a');
       links.forEach(link => {
         link.setAttribute('rel', 'nofollow noopener noreferrer');
@@ -117,7 +117,7 @@
             const date = metadata.date ? new Date(metadata.date).toLocaleDateString('bn-BD') : '';
             const image = metadata.image ? metadata.image : '';
             
-            const cleanText = body.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1').replace(/<[^>]*>/g, '');
+            const cleanText = body.replace(/\[([^\]]+)\][\s\r\n]*\([^\)]+\)/g, '$1').replace(/<[^>]*>/g, '');
             const summary = metadata.summary || cleanText.substring(0, 150) + "...";
 
             const postUrl = `?post=${file.name}`;
@@ -152,8 +152,8 @@
 
         document.title = title;
 
-        // ফরম্যাট করা কন্টেন্ট লোড করা
-        const formattedBody = formatContent(body);
+        // প্রসেস করা কন্টেন্ট লোড করা
+        const formattedBody = processContent(body);
 
         appContent.innerHTML = `
           <a href="/" class="back-btn">&larr; হোমপেজে ফিরে যান</a>
