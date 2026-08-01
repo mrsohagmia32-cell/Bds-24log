@@ -20,7 +20,7 @@
     .post-date { font-size: 0.85em; color: #777; margin-bottom: 12px; }
     .post-summary { line-height: 1.6; color: #555; margin-bottom: 15px; }
     
-    .post-body { line-height: 1.8; font-size: 16px; word-wrap: break-word; white-space: pre-wrap; }
+    .post-body { line-height: 1.8; font-size: 16px; word-wrap: break-word; }
     .post-body a { color: #0070f3 !important; text-decoration: underline !important; font-weight: bold; }
     .post-body a:hover { color: #0056b3 !important; }
     
@@ -74,21 +74,23 @@
       return { metadata, body };
     }
 
-    // ব্র্যাকেট সম্পূর্ণ রিমুভ করে লিঙ্ক তৈরি করার ফাংশন
-    function renderBodyWithLinks(text) {
-      if (!text) return '';
+    // চূড়ান্ত সমাধান: সব ব্র্যাকেট মুছে সরাসরি লিংক তৈরি করার ক্লিনার ফাংশন
+    function cleanAndConvertLinks(rawText) {
+      if (!rawText) return '';
 
-      // ১. ব্র্যাকেট [...] এবং (...) মুছে ফেলে শুধু মূল টেক্সটকে ক্লিকেবল নো-ফলো লিংকে পরিণত করবে
-      let html = text.replace(/\[([\s\S]*?)\][\s\r\n]*\((https?:\/\/[^\s\)]+)\)/gi, function(match, anchorText, url) {
-        return `<a href="${url.trim()}" target="_blank" rel="nofollow noopener noreferrer">${anchorText.trim()}</a>`;
+      // ১. [শব্দ](ইউআরএল) জাতীয় সব কিছু খুঁজে ব্র্যাকেট ধ্বংস করে সরাসরি <a> ট্যাগ তৈরি করবে
+      let converted = rawText.replace(/\[\s*([^\]]+?)\s*\]\s*[\r\n]*\s*\(\s*(https?:\/\/[^\s\)]+)\s*\)/gi, function(match, word, url) {
+        return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer">${word}</a>`;
       });
 
-      // ২. সরাসরি HTML <a> ট্যাগ থাকলেও তাতে rel="nofollow" যোগ করবে
-      html = html.replace(/<a\s+(?:[^>]*?\s+)?href="([^"]*)"([^>]*)>/gi, function(match, url, rest) {
-        return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer"${rest}>`;
+      // ২. সরাসরি কোনো খালি https:// লিংক থাকলে সেটাকেও ক্লিকেবল নো-ফলো লিংক বানাবে
+      converted = converted.replace(/(^|[^\w"'>])(https?:\/\/[^\s<]+)/gi, function(match, space, url) {
+        if (space.includes('href=')) return match;
+        return `${space}<a href="${url}" target="_blank" rel="nofollow noopener noreferrer">${url}</a>`;
       });
 
-      return html;
+      // ৩. পেছনের বাড়তি ব্র্যাকেট যদি ভুলবশত রয়ে যায় সেগুলোও রিমুভ করবে
+      return converted;
     }
 
     async function loadAllPosts() {
@@ -110,8 +112,8 @@
             const date = metadata.date ? new Date(metadata.date).toLocaleDateString('bn-BD') : '';
             const image = metadata.image ? metadata.image : '';
             
-            // সামারির ভেতর থেকেও ব্র্যাকেট দূর করা
-            const cleanText = body.replace(/\[([\s\S]*?)\][\s\r\n]*\([^\)]+\)/g, '$1').replace(/<[^>]*>/g, '');
+            // সামারি থেকে ব্র্যাকেট ও ইউআরএল ফেলে দিয়ে শুধু টেক্সট রাখা
+            const cleanText = body.replace(/\[\s*([^\]]+?)\s*\][\s\r\n]*\([^\)]+\)/g, '$1').replace(/<[^>]*>/g, '');
             const summary = metadata.summary || cleanText.substring(0, 150) + "...";
 
             const postUrl = `?post=${file.name}`;
@@ -146,7 +148,7 @@
 
         document.title = title;
 
-        const formattedBody = renderBodyWithLinks(body);
+        const formattedBody = cleanAndConvertLinks(body);
 
         appContent.innerHTML = `
           <a href="/" class="back-btn">&larr; হোমপেজে ফিরে যান</a>
