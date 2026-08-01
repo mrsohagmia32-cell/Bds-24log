@@ -1,10 +1,59 @@
+<?php
+$repoUser = "mrsohagmia32-cell";
+$repoName = "Bds-24log";
+
+$singlePostFile = isset($_GET['post']) ? $_GET['post'] : null;
+
+function parseFrontmatter($content) {
+    $metadata = [];
+    $body = $content;
+
+    if (preg_match('/^---[\r\n]+([\s\S]*?)[\r\n]+---[\r\n]+([\s\S]*)$/', $content, $matches)) {
+        $headerLines = explode("\n", $matches[1]);
+        foreach ($headerLines as $line) {
+            $parts = explode(':', $line, 2);
+            if (count($parts) == 2) {
+                $key = trim($parts[0]);
+                $value = trim(str_replace(['"', "'"], '', $parts[1]));
+                $metadata[$key] = $value;
+            }
+        }
+        $body = trim($matches[2]);
+    }
+
+    return ['metadata' => $metadata, 'body' => $body];
+}
+
+// PHP দিয়ে ইন্টার ও স্পেস কেটে নো-ফলো লিংক তৈরির পার্সার
+function processLinksAndBody($text) {
+    if (empty($text)) return '';
+
+    // 's' মোড দিয়ে মাল্টি-লাইন ইন্টার কেটে নেওয়া হচ্ছে
+    $pattern = '/\[\s*([\s\S]*?)\s*\]\s*[\r\n]*\s*\(\s*(https?:\/\/[^\s\)]+)\s*\)/sui';
+    $replacement = '<a href="$2" target="_blank" rel="nofollow noopener noreferrer">$1</a>';
+    $html = preg_replace($pattern, $replacement, $text);
+
+    return nl2br($html);
+}
+
+function fetchGitHubData($url) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'PHP-Blog-App');
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    return $response;
+}
+?>
+
 <!DOCTYPE html>
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>আমার ব্লগ</title>
-
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
     .container { max-width: 800px; margin: 0 auto; }
@@ -32,138 +81,89 @@
 
   <div class="container">
     <div class="header-area">
-      <h1><a href="/" style="text-decoration:none; color:inherit;">আমার ব্লগ</a></h1>
+      <h1><a href="index.php" style="text-decoration:none; color:inherit;">আমার ব্লগ</a></h1>
       <a href="/admin/" class="add-post-btn">+ নতুন পোস্ট</a>
     </div>
 
-    <div id="app-content">লোডিং...</div>
+    <div id="app-content">
+      <?php if ($singlePostFile): ?>
+        <?php
+          $rawUrl = "https://raw.githubusercontent.com/{$repoUser}/{$repoName}/main/posts/" . urlencode($singlePostFile);
+          $fileContent = fetchGitHubData($rawUrl);
+
+          if ($fileContent):
+              $parsed = parseFrontmatter($fileContent);
+              $meta = $parsed['metadata'];
+              $body = $parsed['body'];
+
+              $title = isset($meta['title']) ? $meta['title'] : str_replace(['.md', '.html'], '', $singlePostFile);
+              $date = isset($meta['date']) ? date("d/m/Y", strtotime($meta['date'])) : '';
+              $image = isset($meta['image']) ? $meta['image'] : '';
+              
+              $formattedBody = processLinksAndBody($body);
+        ?>
+            <a href="index.php" class="back-btn">&larr; হোমপেজে ফিরে যান</a>
+            <div class="post-card">
+              <?php if (!empty($image)): ?>
+                <img src="<?php echo htmlspecialchars($image); ?>" alt="<?php echo htmlspecialchars($title); ?>">
+              <?php endif; ?>
+              <h1 style="margin-top:0;"><?php echo htmlspecialchars($title); ?></h1>
+              <?php if (!empty($date)): ?>
+                <div class="post-date">প্রকাশের তারিখ: <?php echo $date; ?></div>
+              <?php endif; ?>
+              <div class="post-body"><?php echo $formattedBody; ?></div>
+            </div>
+          <?php else: ?>
+            <p>পোস্টটি পাওয়া যায়নি!</p>
+          <?php endif; ?>
+
+      <?php else: ?>
+        <?php
+          $apiUrl = "https://api.github.com/repos/{$repoUser}/{$repoName}/contents/posts";
+          $jsonResponse = fetchGitHubData($apiUrl);
+          $files = json_decode($jsonResponse, true);
+
+          if (is_array($files) && !isset($files['message'])):
+              $files = array_reverse($files);
+              
+              foreach ($files as $file):
+                  if (isset($file['name']) && (str_ends_with($file['name'], '.md') || str_ends_with($file['name'], '.html'))):
+                      $fileContent = fetchGitHubData($file['download_url']);
+                      $parsed = parseFrontmatter($fileContent);
+                      $meta = $parsed['metadata'];
+                      $body = $parsed['body'];
+
+                      $title = isset($meta['title']) ? $meta['title'] : str_replace(['.md', '.html'], '', $file['name']);
+                      $date = isset($meta['date']) ? date("d/m/Y", strtotime($meta['date'])) : '';
+                      $image = isset($meta['image']) ? $meta['image'] : '';
+
+                      $cleanText = preg_replace('/\[\s*([\s\S]*?)\s*\]\s*[\r\n]*\s*\([^\)]+\)/su', '$1', $body);
+                      $cleanText = strip_tags($cleanText);
+                      $summary = isset($meta['summary']) ? $meta['summary'] : mb_substr($cleanText, 0, 150) . '...';
+
+                      $postUrl = "?post=" . urlencode($file['name']);
+        ?>
+                      <div class="post-card">
+                        <?php if (!empty($image)): ?>
+                          <img src="<?php echo htmlspecialchars($image); ?>" alt="<?php echo htmlspecialchars($title); ?>">
+                        <?php endif; ?>
+                        <h2 class="post-title"><a href="<?php echo $postUrl; ?>"><?php echo htmlspecialchars($title); ?></a></h2>
+                        <?php if (!empty($date)): ?>
+                          <div class="post-date">তারিখ: <?php echo $date; ?></div>
+                        <?php endif; ?>
+                        <div class="post-summary"><?php echo htmlspecialchars($summary); ?></div>
+                        <a href="<?php echo $postUrl; ?>" class="read-more-btn">সম্পূর্ণ পড়ুন &rarr;</a>
+                      </div>
+        <?php
+                  endif;
+              endforeach;
+          else:
+        ?>
+              <p>কোনো পোস্ট পাওয়া যায়নি!</p>
+        <?php endif; ?>
+      <?php endif; ?>
+    </div>
   </div>
 
-  <script>
-    const repoUser = "mrsohagmia32-cell";
-    const repoName = "Bds-24log";
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const singlePostFile = urlParams.get('post');
-    const appContent = document.getElementById('app-content');
-
-    if (singlePostFile) {
-      loadSinglePost(singlePostFile);
-    } else {
-      loadAllPosts();
-    }
-
-    function parseMarkdown(text) {
-      let metadata = {};
-      let body = text;
-
-      const match = text.match(/^---[\s\S]*?---/);
-      if (match) {
-        const header = match[0];
-        body = text.replace(header, '').trim();
-
-        header.split('\n').forEach(line => {
-          const parts = line.split(':');
-          if (parts.length >= 2) {
-            const key = parts[0].trim();
-            const value = parts.slice(1).join(':').replace(/['"]/g, '').trim();
-            metadata[key] = value;
-          }
-        });
-      }
-      return { metadata, body };
-    }
-
-    // ইন্টার ও স্পেস কেটে এক লাইনে এনে লিঙ্ক বানানোর ফাংশন
-    function cleanInterAndConvertLinks(rawText) {
-      if (!rawText) return '';
-
-      // ১. [\s\S]*? দিয়ে ব্র্যাকেটের ভেতরের সব ইন্টার ও স্পেস ধরে লিংক বানানো
-      let html = rawText.replace(/\[\s*([\s\S]*?)\s*\]\s*[\r\n]*\s*\(\s*(https?:\/\/[^\s\)]+)\s*\)/gi, function(match, word, url) {
-        let cleanWord = word.trim();
-        let cleanUrl = url.trim();
-        return `<a href="${cleanUrl}" target="_blank" rel="nofollow noopener noreferrer">${cleanWord}</a>`;
-      });
-
-      // ২. সরাসরি HTML <a> ট্যাগ থাকলেও তাতে rel="nofollow" যোগ করা
-      html = html.replace(/<a\s+(?:[^>]*?\s+)?href="([^"]*)"([^>]*)>/gi, function(match, url, rest) {
-        if (rest.includes('rel=')) return match;
-        return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer"${rest}>`;
-      });
-
-      // ৩. সাধারণ নিউ-লাইনগুলোকে প্যারাগ্রাফ ব্রেক দেওয়া
-      return html.replace(/\r?\n/g, '<br>');
-    }
-
-    async function loadAllPosts() {
-      try {
-        const res = await fetch(`https://api.github.com/repos/${repoUser}/${repoName}/contents/posts?t=${new Date().getTime()}`);
-        if (!res.ok) { appContent.innerHTML = "<p>কোনো পোস্ট পাওয়া যায়নি!</p>"; return; }
-        
-        const files = await res.json();
-        files.reverse();
-        appContent.innerHTML = "";
-
-        for (const file of files) {
-          if (file.name.endsWith(".md") || file.name.endsWith(".html")) {
-            const fileRes = await fetch(file.download_url + `?t=${new Date().getTime()}`);
-            const text = await fileRes.text();
-            const { metadata, body } = parseMarkdown(text);
-
-            const title = metadata.title || file.name.replace(/\.md|\.html/g, '');
-            const date = metadata.date ? new Date(metadata.date).toLocaleDateString('bn-BD') : '';
-            const image = metadata.image ? metadata.image : '';
-            
-            const cleanText = body.replace(/\[\s*([\s\S]*?)\s*\]\s*[\r\n]*\s*\([^\)]+\)/g, '$1').replace(/<[^>]*>/g, '');
-            const summary = metadata.summary || cleanText.substring(0, 150) + "...";
-
-            const postUrl = `?post=${file.name}`;
-
-            appContent.innerHTML += `
-              <div class="post-card">
-                ${image ? `<img src="${image}" alt="${title}">` : ''}
-                <h2 class="post-title"><a href="${postUrl}">${title}</a></h2>
-                ${date ? `<div class="post-date">তারিখ: ${date}</div>` : ''}
-                <div class="post-summary">${summary}</div>
-                <a href="${postUrl}" class="read-more-btn">সম্পূর্ণ পড়ুন &rarr;</a>
-              </div>
-            `;
-          }
-        }
-      } catch (e) {
-        appContent.innerHTML = "<p>পোস্ট লোড করতে সমস্যা হয়েছে!</p>";
-      }
-    }
-
-    async function loadSinglePost(fileName) {
-      try {
-        const res = await fetch(`https://raw.githubusercontent.com/${repoUser}/${repoName}/main/posts/${fileName}?t=${new Date().getTime()}`);
-        if (!res.ok) { appContent.innerHTML = "<p>পোস্টটি পাওয়া যায়নি!</p>"; return; }
-
-        const text = await res.text();
-        const { metadata, body } = parseMarkdown(text);
-
-        const title = metadata.title || fileName.replace(/\.md|\.html/g, '');
-        const date = metadata.date ? new Date(metadata.date).toLocaleDateString('bn-BD') : '';
-        const image = metadata.image ? metadata.image : '';
-
-        document.title = title;
-
-        const formattedBody = cleanInterAndConvertLinks(body);
-
-        appContent.innerHTML = `
-          <a href="/" class="back-btn">&larr; হোমপেজে ফিরে যান</a>
-          <div class="post-card">
-            ${image ? `<img src="${image}" alt="${title}">` : ''}
-            <h1 style="margin-top:0;">${title}</h1>
-            ${date ? `<div class="post-date">প্রকাশের তারিখ: ${date}</div>` : ''}
-            <div class="post-body">${formattedBody}</div>
-          </div>
-        `;
-      } catch (e) {
-        appContent.innerHTML = "<p>পোস্ট লোড করতে সমস্যা হয়েছে!</p>";
-      }
-    }
-  </script>
 </body>
 </html>
