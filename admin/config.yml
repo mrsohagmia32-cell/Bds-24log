@@ -1,18 +1,147 @@
-backend:
-  name: git-gateway
-  branch: main
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>আমার ব্লগ</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #ddd; padding-bottom: 15px; }
+    h1 { margin: 0; color: #2c3e50; font-size: 24px; }
+    .add-post-btn { background-color: #28a745; color: white; text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; }
+    
+    .post-card { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+    .post-card img { max-width: 100%; height: auto; border-radius: 6px; margin-bottom: 15px; }
+    .post-title { font-size: 22px; margin: 0 0 10px 0; }
+    .post-title a { color: #0070f3; text-decoration: none; }
+    .post-title a:hover { text-decoration: underline; }
+    .post-date { font-size: 0.85em; color: #777; margin-bottom: 12px; }
+    .post-summary { line-height: 1.6; color: #555; margin-bottom: 15px; }
+    .read-more-btn { display: inline-block; background: #0070f3; color: #fff; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 14px; }
+    .back-btn { display: inline-block; margin-bottom: 20px; color: #0070f3; text-decoration: none; font-weight: bold; }
+  </style>
+</head>
+<body>
 
-media_folder: "images"
-public_folder: "/images"
+  <div class="container">
+    <div class="header-area">
+      <h1><a href="/" style="text-decoration:none; color:inherit;">আমার ব্লগ</a></h1>
+      <a href="/admin/" class="add-post-btn">+ নতুন পোস্ট</a>
+    </div>
 
-collections:
-  - name: "blog"
-    label: "ব্লগ পোস্ট"
-    folder: "posts"
-    create: true
-    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
-    fields:
-      - {label: "শিরোনাম (Title)", name: "title", widget: "string"}
-      - {label: "তারিখ (Publish Date)", name: "date", widget: "datetime"}
-      - {label: "মূল লেখা (Body)", name: "body", widget: "markdown"}
+    <div id="app-content">লোডিং...</div>
+  </div>
 
+  <script>
+    const repoUser = "mrsohagmia32-cell";
+    const repoName = "Bds-24log";
+
+    // URL Parameter পরীক্ষা করা (আলাদা পোস্টের লিংক কি না)
+    const urlParams = new URLSearchParams(window.location.search);
+    const singlePostFile = urlParams.get('post');
+
+    const appContent = document.getElementById('app-content');
+
+    if (singlePostFile) {
+      // ১. নির্দিষ্ট একটা সম্পূর্ণ পোস্ট দেখানোর অংশ (Single Post View)
+      loadSinglePost(singlePostFile);
+    } else {
+      // ২. সব পোস্টের সামারি দেখানোর অংশ (Home View)
+      loadAllPosts();
+    }
+
+    // Frontmatter (Title, Image, Summary) পার্সিং ফাংশন
+    function parseMarkdown(text) {
+      let metadata = {};
+      let body = text;
+
+      const match = text.match(/^---[\s\S]*?---/);
+      if (match) {
+        const header = match[0];
+        body = text.replace(header, '').trim();
+
+        header.split('\n').forEach(line => {
+          const parts = line.split(':');
+          if (parts.length >= 2) {
+            const key = parts[0].trim();
+            const value = parts.slice(1).join(':').replace(/['"]/g, '').trim();
+            metadata[key] = value;
+          }
+        });
+      }
+      return { metadata, body };
+    }
+
+    // সব পোস্ট হোমপেজে লোড করা
+    async function loadAllPosts() {
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repoUser}/${repoName}/contents/posts?t=${new Date().getTime()}`);
+        if (!res.ok) { appContent.innerHTML = "<p>কোনো পোস্ট পাওয়া যায়নি!</p>"; return; }
+        
+        const files = await res.json();
+        files.reverse();
+        appContent.innerHTML = "";
+
+        for (const file of files) {
+          if (file.name.endsWith(".md") || file.name.endsWith(".html")) {
+            const fileRes = await fetch(file.download_url + `?t=${new Date().getTime()}`);
+            const text = await fileRes.text();
+            const { metadata, body } = parseMarkdown(text);
+
+            const title = metadata.title || file.name.replace(/\.md|\.html/g, '');
+            const date = metadata.date ? new Date(metadata.date).toLocaleDateString('bn-BD') : '';
+            const image = metadata.image ? metadata.image : '';
+            // সংক্ষিপ্ত লেখা (Summary না থাকলে প্রথম ১০০ অক্ষর নেবে)
+            const summary = metadata.summary || body.substring(0, 150) + "...";
+
+            const postUrl = `?post=${file.name}`;
+
+            appContent.innerHTML += `
+              <div class="post-card">
+                ${image ? `<img src="${image}" alt="${title}">` : ''}
+                <h2 class="post-title"><a href="${postUrl}">${title}</a></h2>
+                ${date ? `<div class="post-date">তারিখ: ${date}</div>` : ''}
+                <div class="post-summary">${summary}</div>
+                <a href="${postUrl}" class="read-more-btn">সম্পূর্ণ পড়ুন &rarr;</a>
+              </div>
+            `;
+          }
+        }
+      } catch (e) {
+        appContent.innerHTML = "<p>পোস্ট লোড করতে সমস্যা হয়েছে!</p>";
+      }
+    }
+
+    // আলাদা ইউআরএলে সম্পূর্ণ পোস্ট লোড করা
+    async function loadSinglePost(fileName) {
+      try {
+        const res = await fetch(`https://raw.githubusercontent.com/${repoUser}/${repoName}/main/posts/${fileName}?t=${new Date().getTime()}`);
+        if (!res.ok) { appContent.innerHTML = "<p>পোস্টটি পাওয়া যায়নি!</p>"; return; }
+
+        const text = await res.text();
+        const { metadata, body } = parseMarkdown(text);
+
+        const title = metadata.title || fileName.replace(/\.md|\.html/g, '');
+        const date = metadata.date ? new Date(metadata.date).toLocaleDateString('bn-BD') : '';
+        const image = metadata.image ? metadata.image : '';
+
+        // ব্রাউজারের ট্যাবের টাইটেল পরিবর্তন
+        document.title = title;
+
+        appContent.innerHTML = `
+          <a href="/" class="back-btn">&larr; হোমপেজে ফিরে যান</a>
+          <div class="post-card">
+            ${image ? `<img src="${image}" alt="${title}">` : ''}
+            <h1 style="margin-top:0;">${title}</h1>
+            ${date ? `<div class="post-date">প্রকাশের তারিখ: ${date}</div>` : ''}
+            <div style="line-height:1.8; white-space:pre-wrap; font-size:16px;">${body}</div>
+          </div>
+        `;
+      } catch (e) {
+        appContent.innerHTML = "<p>পোস্ট লোড করতে সমস্যা হয়েছে!</p>";
+      }
+    }
+  </script>
+</body>
+</html>
