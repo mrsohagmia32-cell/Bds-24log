@@ -11,9 +11,27 @@ collections:
     folder: "posts"
     create: true
     slug: "{{slug}}"
+    editor:
+      preview: true
     fields:
       - {label: "শিরোনাম (Title)", name: "title", widget: "string"}
       - {label: "ফিচারড ইমেজ (Image)", name: "image", widget: "image", required: false}
       - {label: "তারিখ (Publish Date)", name: "date", widget: "datetime"}
       - {label: "সংক্ষিপ্ত বিবরণ (Short Summary)", name: "summary", widget: "text", required: false}
-      - {label: "মূল লেখা (Body)", name: "body", widget: "markdown"}
+      - label: "মূল লেখা (Body)"
+        name: "body"
+        widget: "markdown"
+        sanitize_hidden: false
+        # এডিটর যাতে লিংক বা টেক্সটকে ভেঙে আলাদা ব্র্যাকেটে রূপান্তর না করে
+        buttons:
+          - bold
+          - italic
+          - code
+          - link
+          - heading-two
+          - heading-three
+          - quote
+          - bulleted-list
+          - numbered-list
+        editor_components: []
+        modes: ["rich_text", "code"]
