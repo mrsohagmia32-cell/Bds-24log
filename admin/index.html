@@ -1,14 +1,72 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>পোস্ট ম্যানেজার / এডমিন প্যানেল</title>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <title>এডমিন প্যানেল - ব্লগ পোস্ট</title>
+  <!-- Decap CMS скрипт -->
+  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  
+  <style>
+    /* ভাসমান কোড কপি বাটন styling */
+    .admin-copy-bar {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999999;
+      background: #2c3e50;
+      padding: 10px 15px;
+      border-radius: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+
+    .admin-copy-btn {
+      background-color: #0070f3;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .admin-copy-btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
-  <!-- Decap CMS Script -->
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+
+  <!-- ভাসমান লিংক কপি বাটন -->
+  <div class="admin-copy-bar">
+    <button onclick="copyHtmlLinkForAdmin()" id="adminCopyBtn" class="admin-copy-btn">📋 HTML লিংক কোড কপি</button>
+  </div>
+
+  <script>
+    function copyHtmlLinkForAdmin() {
+      const htmlCode = '<a href="https://example.com">আপনার লেখা</a>';
+      
+      navigator.clipboard.writeText(htmlCode).then(() => {
+        const btn = document.getElementById('adminCopyBtn');
+        btn.innerText = "✅ কপি হয়েছে!";
+        btn.style.backgroundColor = "#28a745";
+        
+        setTimeout(() => {
+          btn.innerText = "📋 HTML লিংক কোড কপি";
+          btn.style.backgroundColor = "#0070f3";
+        }, 2000);
+      }).catch(err => {
+        alert("কোড কপি করা যায়নি!");
+      });
+    }
+  </script>
+
 </body>
 </html>
-
