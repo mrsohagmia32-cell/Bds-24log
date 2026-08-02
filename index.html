@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>আমার ব্লগ</title>
+
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+    h1 { margin: 0; color: #2c3e50; font-size: 24px; }
+    
+    .nav-buttons { display: flex; gap: 10px; }
+    .add-post-btn { background-color: #28a745; color: white; text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; }
+    .copy-link-btn { background-color: #0070f3; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+    .copy-link-btn:hover { background-color: #0056b3; }
+
+    .post-card { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+    .post-card img { max-width: 100%; height: auto; border-radius: 6px; margin-bottom: 15px; }
+    .post-title { font-size: 22px; margin: 0 0 10px 0; }
+    .post-title a { color: #0070f3; text-decoration: none; }
+    .post-title a:hover { text-decoration: underline; }
+    .post-date { font-size: 0.85em; color: #777; margin-bottom: 12px; }
+    .post-summary { line-height: 1.6; color: #555; margin-bottom: 15px; }
+    
+    .post-body { line-height: 1.8; font-size: 16px; word-wrap: break-word; }
+    .post-body a { color: #0070f3 !important; text-decoration: underline !important; font-weight: bold; }
+    .post-body a:hover { color: #0056b3 !important; }
+    
+    .read-more-btn { display: inline-block; background: #0070f3; color: #fff; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 14px; }
+    .back-btn { display: inline-block; margin-bottom: 20px; color: #0070f3; text-decoration: none; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-area">
+      <h1><a href="/" style="text-decoration:none; color:inherit;">আমার ব্লগ</a></h1>
+      
+      <div class="nav-buttons">
+        <!-- এইচটিএমএল লিংক কপি করার বাটন -->
+        <button onclick="copyHtmlLinkFormat()" id="copyBtn" class="copy-link-btn">📋 লিংক কোড কপি করুন</button>
+        <a href="/admin/" class="add-post-btn">+ নতুন পোস্ট</a>
+      </div>
+    </div>
+
+    <div id="app-content">লোডিং...</div>
+  </div>
+
+  <script>
+    const repoUser = "mrsohagmia32-cell";
+    const repoName = "Bds-24log";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const singlePostFile = urlParams.get('post');
+    const appContent = document.getElementById('app-content');
+
+    // লিংক কোড ক্লিফবোর্ডে কপি করার ফাংশন
+    function copyHtmlLinkFormat() {
+      const htmlCode = '<a href="https://example.com">আপনার লেখা</a>';
+      navigator.clipboard.writeText(htmlCode).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.innerText = "✅ কপি হয়েছে!";
+        btn.style.backgroundColor = "#28a745";
+        
+        setTimeout(() => {
+          btn.innerText = "📋 লিংক কোড কপি করুন";
+          btn.style.backgroundColor = "#0070f3";
+        }, 2000);
+      }).catch(err => {
+        alert("কোড কপি করা যায়নি!");
+      });
+    }
+
+    if (singlePostFile) {
+      loadSinglePost(singlePostFile);
+    } else {
+      loadAllPosts();
+    }
+
+    function parseMarkdown(text) {
+      let metadata = {};
+      let body = text;
+
+      const match = text.match(/^---[\s\S]*?---/);
+      if (match) {
+        const header = match[0];
+        body = text.replace(header, '').trim();
+
+        header.split('\n').forEach(line => {
+          const parts = line.split(':');
+          if (parts.length >= 2) {
+            const key = parts[0].trim();
+            const value = parts.slice(1).join(':').replace(/['"]/g, '').trim();
+            metadata[key] = value;
+          }
+        });
+      }
+      return { metadata, body };
+    }
+
+    function cleanInterAndConvertLinks(rawText) {
+      if (!rawText) return '';
+      let html = rawText.replace(/\[\s*([\s\S]*?)\s*\]\s*[\r\n]*\s*\(\s*(https?:\/\/[^\s\)]+)\s*\)/gi, function(match, word, url) {
+        return `<a href="${url.trim()}" target="_blank" rel="nofollow noopener noreferrer">${word.trim()}</a>`;
+      });
+      return html.replace(/\r?\n/g, '<br>');
+    }
+
+    function weightedRandomShuffle(postsList) {
+      let authorCounts = {};
+      postsList.forEach(post => {
+        let author = post.metadata.author || 'default';
+        authorCounts[author] = (authorCounts[author] || 0) + 1;
+      });
+
+      let pool = postsList.map(post => {
+        let author = post.metadata.author || 'default';
+        let count = authorCounts[author];
+        return {
+          post: post,
+          weight: Math.pow(count, 1.5) * Math.random() 
+        };
+      });
+
+      pool.sort((a, b) => b.weight - a.weight);
+      return pool.map(item => item.post);
+    }
+
+    async function loadAllPosts() {
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repoUser}/${repoName}/contents/posts?t=${new Date().getTime()}`);
+        if (!res.ok) { appContent.innerHTML = "<p>কোনো পোস্ট পাওয়া যায়নি!</p>"; return; }
+        
+        const files = await res.json();
+        let parsedPosts = [];
+
+        for (const file of files) {
+          if (file.name.endsWith(".md") || file.name.endsWith(".html")) {
+            const fileRes = await fetch(file.download_url + `?t=${new Date().getTime()}`);
+            const text = await fileRes.text();
+            const { metadata, body } = parseMarkdown(text);
+            parsedPosts.push({ file, metadata, body });
+          }
+        }
+
+        let finalPosts = weightedRandomShuffle(parsedPosts);
+        appContent.innerHTML = "";
+
+        for (const item of finalPosts) {
+          const { file, metadata, body } = item;
+          const title = metadata.title || file.name.replace(/\.md|\.html/g, '');
+          const date = metadata.date ? new Date(metadata.date).toLocaleDateString('bn-BD') : '';
+          const image = metadata.image ? metadata.image : '';
+          
+          const cleanText = body.replace(/\[\s*([\s\S]*?)\s*\]\s*[\r\n]*\s*\([^\)]+\)/g, '$1').replace(/<[^>]*>/g, '');
+          const summary = metadata.summary || cleanText.substring(0, 150) + "...";
+          const postUrl = `?post=${file.name}`;
+
+          appContent.innerHTML += `
+            <div class="post-card">
+              ${image ? `<img src="${image}" alt="${title}">` : ''}
+              <h2 class="post-title"><a href="${postUrl}">${title}</a></h2>
+              ${date ? `<div class="post-date">তারিখ: ${date}</div>` : ''}
+              <div class="post-summary">${summary}</div>
+              <a href="${postUrl}" class="read-more-btn">সম্পূর্ণ পড়ুন &rarr;</a>
+            </div>
+          `;
+        }
+      } catch (e) {
+        appContent.innerHTML = "<p>পোস্ট লোড করতে সমস্যা হয়েছে!</p>";
+      }
+    }
+
+    async function loadSinglePost(fileName) {
+      try {
+        const res = await fetch(`https://raw.githubusercontent.com/${repoUser}/${repoName}/main/posts/${fileName}?t=${new Date().getTime()}`);
+        if (!res.ok) { appContent.innerHTML = "<p>পোস্টটি পাওয়া যায়নি!</p>"; return; }
+
+        const text = await res.text();
+        const { metadata, body } = parseMarkdown(text);
+
+        const title = metadata.title || fileName.replace(/\.md|\.html/g, '');
+        const date = metadata.date ? new Date(metadata.date).toLocaleDateString('bn-BD') : '';
+        const image = metadata.image ? metadata.image : '';
+
+        document.title = title;
+        const formattedBody = cleanInterAndConvertLinks(body);
+
+        appContent.innerHTML = `
+          <a href="/" class="back-btn">&larr; হোমপেজে ফিরে যান</a>
+          <div class="post-card">
+            ${image ? `<img src="${image}" alt="${title}">` : ''}
+            <h1 style="margin-top:0;">${title}</h1>
+            ${date ? `<div class="post-date">প্রকাশের তারিখ: ${date}</div>` : ''}
+            <div class="post-body">${formattedBody}</div>
+          </div>
+        `;
+      } catch (e) {
+        appContent.innerHTML = "<p>পোস্ট লোড করতে সমস্যা হয়েছে!</p>";
+      }
+    }
+  </script>
+</body>
+</html>
