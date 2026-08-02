@@ -3,53 +3,55 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>এডমিন প্যানেল - ব্লগ পোস্ট</title>
-  <!-- Decap CMS скрипт -->
+  <title>পোস্ট ম্যানেজার / এডমিন প্যানেল</title>
+  <!-- Decap CMS Script -->
   <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
-  
+
   <style>
-    /* ভাসমান কোড কপি বাটন styling */
-    .admin-copy-bar {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 999999;
+    /* লিংক কোড কপি বাটন styling */
+    #admin-copy-bar {
+      position: fixed !important;
+      bottom: 25px !important;
+      left: 20px !important;
+      z-index: 9999999 !important;
       background: #2c3e50;
-      padding: 10px 15px;
+      padding: 8px 14px;
       border-radius: 30px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-family: Arial, sans-serif;
     }
 
-    .admin-copy-btn {
+    #adminCopyBtn {
       background-color: #0070f3;
       color: white;
       border: none;
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 20px;
       font-weight: bold;
       font-size: 13px;
       cursor: pointer;
-      transition: background 0.2s ease;
       white-space: nowrap;
     }
 
-    .admin-copy-btn:hover {
+    #adminCopyBtn:hover {
       background-color: #0056b3;
     }
   </style>
 </head>
 <body>
 
-  <!-- ভাসমান লিংক কপি বাটন -->
-  <div class="admin-copy-bar">
-    <button onclick="copyHtmlLinkForAdmin()" id="adminCopyBtn" class="admin-copy-btn">📋 HTML লিংক কোড কপি</button>
+  <!-- এডমিন প্যানেলের ভাসমান বাটন -->
+  <div id="admin-copy-bar">
+    <button onclick="copyHtmlLinkForAdmin()" id="adminCopyBtn">📋 HTML লিংক কোড কপি</button>
   </div>
 
   <script>
+    // ১. আপনার সিক্রেট ডিলিট পাসওয়ার্ড (এখানে আপনার পছন্দমতো পাসওয়ার্ড লিখে দিন)
+    const DELETE_PASSWORD = "123456"; 
+
+    // ২. লিংক কোড কপি করার ফাংশন
     function copyHtmlLinkForAdmin() {
       const htmlCode = '<a href="https://example.com">আপনার লেখা</a>';
       
@@ -66,6 +68,24 @@
         alert("কোড কপি করা যায়নি!");
       });
     }
+
+    // ৩. ডিলিট বাটনে সিকিউরিটি পাসওয়ার্ড লক সিস্টেম
+    document.addEventListener('click', function (e) {
+      // যদি কেউ ডিলিট বাটনে বা ডিলিট টেক্সটে ক্লিক করে
+      const targetBtn = e.target.closest('button, a, span');
+      if (targetBtn && (targetBtn.innerText.includes('Delete') || targetBtn.innerText.includes('ডিলিট'))) {
+        
+        // পাসওয়ার্ড পপ-আপ চাইবে
+        const userPass = prompt("⚠️ এই পোস্টটি ডিলিট করতে এডমিন পাসওয়ার্ড দিন:");
+        
+        if (userPass !== DELETE_PASSWORD) {
+          e.preventDefault();
+          e.stopPropagation();
+          alert("❌ ভুল পাসওয়ার্ড! আপনি পোস্ট ডিলিট করতে পারবেন না।");
+          return false;
+        }
+      }
+    }, true);
   </script>
 
 </body>
