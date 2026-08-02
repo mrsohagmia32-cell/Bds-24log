@@ -6,31 +6,46 @@
   <title>আমার ব্লগ</title>
 
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background: #f4f4f9; color: #333; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; background: #f4f4f9; color: #333; padding-bottom: 80px; }
     .container { max-width: 800px; margin: 0 auto; }
     
-    /* হেডার ও বাটন সেকশন মোবাইল ফ্রেন্ডলি করা হয়েছে */
-    .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+    .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 12px; }
     h1 { margin: 0; color: #2c3e50; font-size: 22px; }
-    
-    .nav-buttons { display: flex; gap: 8px; align-items: center; }
-    .add-post-btn { background-color: #28a745; color: white; text-decoration: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; white-space: nowrap; }
-    .copy-link-btn { background-color: #0070f3; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .add-post-btn { background-color: #28a745; color: white; text-decoration: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 13px; }
 
-    .post-card { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
-    .post-card img { max-width: 100%; height: auto; border-radius: 6px; margin-bottom: 15px; }
-    .post-title { font-size: 22px; margin: 0 0 10px 0; }
+    /* ভাসমান কপি টুলবার (স্ক্রিনের নিচে স্থায়ী থাকবে) */
+    .floating-tools {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2c3e50;
+      padding: 10px 18px;
+      border-radius: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 9999;
+      width: 90%;
+      max-width: 400px;
+      justify-content: space-between;
+    }
+    .tool-text { color: #fff; font-size: 12px; font-weight: 500; }
+    .copy-link-btn { background-color: #0070f3; color: white; border: none; padding: 7px 14px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; }
+
+    .post-card { background: #fff; padding: 18px; margin-bottom: 18px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+    .post-card img { max-width: 100%; height: auto; border-radius: 6px; margin-bottom: 12px; }
+    .post-title { font-size: 20px; margin: 0 0 10px 0; }
     .post-title a { color: #0070f3; text-decoration: none; }
-    .post-title a:hover { text-decoration: underline; }
-    .post-date { font-size: 0.85em; color: #777; margin-bottom: 12px; }
-    .post-summary { line-height: 1.6; color: #555; margin-bottom: 15px; }
+    .post-date { font-size: 0.82em; color: #777; margin-bottom: 10px; }
+    .post-summary { line-height: 1.6; color: #555; margin-bottom: 12px; font-size: 14px; }
     
     .post-body { line-height: 1.8; font-size: 16px; word-wrap: break-word; }
     .post-body a { color: #0070f3 !important; text-decoration: underline !important; font-weight: bold; }
-    .post-body a:hover { color: #0056b3 !important; }
     
-    .read-more-btn { display: inline-block; background: #0070f3; color: #fff; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 14px; }
-    .back-btn { display: inline-block; margin-bottom: 20px; color: #0070f3; text-decoration: none; font-weight: bold; }
+    .read-more-btn { display: inline-block; background: #0070f3; color: #fff; padding: 7px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; }
+    .back-btn { display: inline-block; margin-bottom: 15px; color: #0070f3; text-decoration: none; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -38,16 +53,16 @@
   <div class="container">
     <div class="header-area">
       <h1><a href="/" style="text-decoration:none; color:inherit;">আমার ব্লগ</a></h1>
-      
-      <div class="nav-buttons">
-        <!-- নীল রঙের কপি বাটন -->
-        <button onclick="copyHtmlLinkFormat()" id="copyBtn" class="copy-link-btn">📋 লিংক কপি</button>
-        <!-- সবুজ রঙের নতুন পোস্ট বাটন -->
-        <a href="/admin/" class="add-post-btn">+ নতুন পোস্ট</a>
-      </div>
+      <a href="/admin/" class="add-post-btn">+ নতুন পোস্ট</a>
     </div>
 
     <div id="app-content">লোডিং...</div>
+  </div>
+
+  <!-- স্ক্রিনের একদম নিচে ভাসমান বাটন (সবসময় দেখা যাবে) -->
+  <div class="floating-tools">
+    <span class="tool-text">HTML লিংক কোড:</span>
+    <button onclick="copyHtmlLinkFormat()" id="copyBtn" class="copy-link-btn">📋 কোড কপি করুন</button>
   </div>
 
   <script>
@@ -66,7 +81,7 @@
         btn.style.backgroundColor = "#28a745";
         
         setTimeout(() => {
-          btn.innerText = "📋 লিংক কপি";
+          btn.innerText = "📋 কোড কপি করুন";
           btn.style.backgroundColor = "#0070f3";
         }, 2000);
       }).catch(err => {
